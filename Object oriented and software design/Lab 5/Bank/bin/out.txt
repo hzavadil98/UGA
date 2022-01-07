@@ -1,0 +1,39 @@
+
+current account tests, can it go negative
+account id: 1804289383
+	balance: 100
+account id: 1804289383
+	balance: 25
+account id: 1804289383
+	balance: 0
+
+savings account, can it debit, does interest percent work?
+account id: 846930886
+	balance: 100
+account id: 846930886
+	balance: 104
+account id: 1681692777
+	balance: 100
+account id: 1681692777
+	balance: 102
+client: billy ray cyrus
+id: 1
+max: 2
+credit: 100credit: 101credit: -1credit: -2client: billy ray cyrus
+id: 1
+max: 2
+account id: 1714636915
+	balance: 100
+account id: 1957747793
+	balance: 0
+clients...
+client: billy ray cyrus
+id: 1
+max: 2
+account id: 1714636915
+	balance: 100
+account id: 1957747793
+	balance: 0
+client: joe list
+id: 2
+max: 1

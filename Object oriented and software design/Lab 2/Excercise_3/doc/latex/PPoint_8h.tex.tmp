@@ -1,0 +1,23 @@
+\hypertarget{PPoint_8h}{}\doxysection{/home/jan/\+C++/\+Lab2/\+Excercise\+\_\+3/include/\+P\+Point.h File Reference}
+\label{PPoint_8h}\index{/home/jan/C++/Lab2/Excercise\_3/include/PPoint.h@{/home/jan/C++/Lab2/Excercise\_3/include/PPoint.h}}
+
+
+\mbox{\hyperlink{classPPoint}{P\+Point}} class header.  
+
+
+{\ttfamily \#include $<$iostream$>$}\newline
+{\ttfamily \#include $<$typeinfo$>$}\newline
+Include dependency graph for P\+Point.\+h\+:
+% FIG 0
+This graph shows which files directly or indirectly include this file\+:
+% FIG 1
+\doxysubsection*{Classes}
+\begin{DoxyCompactItemize}
+\item 
+class \mbox{\hyperlink{classPPoint}{P\+Point}}
+\begin{DoxyCompactList}\small\item\em Class representing a 2D point. \end{DoxyCompactList}\end{DoxyCompactItemize}
+
+
+\doxysubsection{Detailed Description}
+\mbox{\hyperlink{classPPoint}{P\+Point}} class header. 
+
