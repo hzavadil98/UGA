@@ -1,0 +1,84 @@
+---
+title: "Statistical analysis and document mining - TP1"
+output: html_document
+---
+### Jan Zavadil, Elliott Perryman, Ignat Sabaev
+
+### Part 1:
+
+#### 1)
+```{r}
+set.seed(0)
+
+rows = 6000
+cols = 201
+
+data = rnorm(rows*cols)
+mat = matrix(data,nrow = rows)
+df = data.frame(mat)
+```
+#### 2)
+We define a Gaussian multiple linear regression model using the last 200 variables to predict the first one
+$$X_{1,i} = \beta_0 + \sum_{j = 1}^{200} \beta_j X_{j+1,i} + \varepsilon_i.$$
+The true regression model associated with the data is
+$$ X_{1,i} = \varepsilon_i. $$
+When compared, we get that all the coefficients $\beta_i$ should be equal to 0.
+#### 3)
+
+```{r}
+model = summary(lm(X1 ~ . , data = df))
+
+sum(model$coefficients[,4]<0.05)
+
+```
+The number of coefficients assessed as significantly non-zero at the level of 5% is 9. The first variable is drawn completely independently of the other ones, all the coefficients should be equal to zero. 
+
+#### 4)
+Next we simulate a sample of size $n = 1000$ of the following model
+$$X_{1,i} = \varepsilon_{1,i} \\ 
+  X_{2,i} = 3X_{1,i} + \varepsilon_{2,i} \\
+  Y_{i} = X_{1,i} + X_{2,i} + 2 + \varepsilon_{3,i}.$$
+
+```{r}
+X1 = rnorm(1000)
+X2 = 3*X1 + rnorm(1000)
+Y = X1 + X2 + 2 + rnorm(1000)
+dat = data.frame(X1,X2,Y)
+```
+The distribution of $(X_{1,i},X_{2,i})$ for  a given $i$ is two dimensional normal distribution, therefore if we plot the generated samples of $(X_{1,i},X_{2,i})$ we get a cloud of points shaped as an ellipsoid. This shape is given by the form of 2-D normal density.
+
+```{r}
+plot(X1,X2)
+```
+
+#### 5)
+Model 1: $Y_{i} = \beta_1 X_{1,i} + \beta_0 + \tilde{\varepsilon}_{1,i}$
+
+```{r}
+summary(lm(Y ~ X1,data = dat))
+```
+Model 2: $Y_{i} = \beta_2 X_{2,i} + \beta_0 + \tilde{\varepsilon}_{2,i}$
+```{r}
+summary(lm(Y ~ X2,data = dat))
+```
+Estimates of $\beta_0, \beta_1, \beta_2, \sigma^2$ are really close to their true values: $$\beta_0 \approx 2 \\ \beta_1 \approx 4 \\ \beta_2 \approx 1.33 \\ \sigma^2 \approx 1$$
+Now we estimate parameters for this model again fo $n = 10$.
+
+```{r}
+set.seed(3)
+
+X1 = rnorm(10)
+X2 = 3*X1 + rnorm(10)
+Y = X1 + X2 + 2 + rnorm(10)
+dat = data.frame(X1,X2,Y)
+
+summary(lm(Y ~ X1,data = dat))
+summary(lm(Y ~ X2,data = dat))
+```
+The only difference we see is lower precision in parameter estimation and remarkably lower values of t-tests and F-tests in both cases.
+
+#### 6)
+```{r}
+summary(lm(Y ~ .,data = dat))
+```
+There is a high correlation between $X_1$ and $X_2$, which causes them both to be evaluated as unimportant to explain the model.
