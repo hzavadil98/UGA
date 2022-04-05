@@ -1,0 +1,75 @@
+---
+title: "DariaLab"
+output: html_document
+---
+```{r cache=TRUE}
+rm(list=ls())
+set.seed(0) # reproducibility
+# load libraries
+library("nnet")
+library("MASS")
+library("class")
+library("naivebayes")
+# set some handy defines
+MAX_ITER = 10
+#labels = c("NorthAmerica", "CentralAmerica", "SouthAmerica")
+
+
+word_count_train <- read.csv("word_count_train.csv") 
+word_count_test <- read.csv("word_count_test.csv") 
+tfidf_train <- read.csv("tfidf_train.csv") 
+tfidf_test <- read.csv("tfidf_test.csv")
+options(max.print=50)
+```
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## questions
+1 dense matrices require large amounts of memory, we could use sparse matrix forms instead
+
+
+2.1 19164
+2.2 "the" appears 7 times. this adds a useless word to the problem, increasing the computational complexity, introducing bias, and not improving results.
+2.3 "aaaand" appears once. it should be simplified to "and", which should be in the stopwords list and ignored.
+
+3.1 laplace smoothing avoids numerical instability when a word has not been seen before for a specific class
+```{r}
+fit = multinomial_naive_bayes(x=word_count_train[,-c(1)], y=as.factor(word_count_train[,1]), data = word_count_train, laplace=1)
+```
+
+
+```{r}
+pred_train = predict(fit, as.matrix(word_count_train[, -c(1)]))
+pred_test = predict(fit, as.matrix(word_count_test[, -c(1)]))
+```
+
+
+```{r}
+1 - sum(pred_train == word_count_train[, "y"])/1000
+1 - sum(pred_test == word_count_test[, "y"])/250
+```
+```{r}
+pcaFit = prcomp(tfidf_train[,-c(1)], scale.=F)
+pca_train = predict(pcaFit, tfidf_train)
+pca_test  = predict(pcaFit, tfidf_test)
+```
+
+```{r}
+df = data.frame(pca_train[, 1:700])
+df["y"] = tfidf_train[, "y"]
+fit = lda(formula=y~., data=df)
+```
+
+
+```{r}
+pred_train = predict(fit, df)
+df2 = data.frame(pca_test[, 1:700])
+pred_test = predict(fit, df2)
+```
+
+```{r}
+1 - sum(pred_train$class==df[, "y"]) / 1000
+1 - sum(pred_test$class==tfidf_test[, "y"]) / 250
+```
