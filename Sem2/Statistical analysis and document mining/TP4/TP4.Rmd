@@ -1,0 +1,184 @@
+---
+title: "TP4"
+author: "Elliott Perryman, Jan Zavadil, Ignat Sabaev"
+date: "4/4/2022"
+output: html_document
+---
+
+
+## 1. Import and first explorations
+Firstly, we load the data from the text file and create an R graph structure. 
+
+```{r, warning=F}
+set.seed(0)
+library ( igraph )
+dat <- read.table ("lesmis.txt", header = FALSE , sep = "\t")
+misgraph <- simplify ( graph.data.frame ( dat , directed = FALSE ))
+
+```
+
+#### a)
+This graph structure is plotted using $\texttt{plot.igraph}$ function. It supports a vast variety of ways to fine tune the looks of the graph. It is possible to specify the layout of the graph using the $\texttt{layout}$ parameter by either providing the coordinates for each vertex or by using one of the predefined layouts, eg. circle, sphere or fruchterman.reingold as seen in the following plots.
+
+
+```{r}
+plot.igraph(misgraph, layout = layout.circle, vertex.color = "red", edge.color = "blue", vertex.size = 8, vertex.frame.color = "green", vertex.label.font = 3, vertex.label.cex = 0.7, vertex.label.dist = 1.5, vertex.label.color = "black", edge.curved = TRUE,edge.width = 0.2,  main = "Graph of characters from les Miserables - circle")
+
+plot.igraph(misgraph, layout = layout.sphere, vertex.color = "red", edge.color = "blue", vertex.size = 8, vertex.frame.color = "green", vertex.label.font = 3, vertex.label.cex = 0.7, vertex.label.dist = 1.5, vertex.label.color = "black", edge.curved = TRUE,edge.width = 0.2,  main = "Graph of characters from les Miserables - sphere")
+
+
+plot.igraph(misgraph, layout = layout.fruchterman.reingold, vertex.color = "red", edge.color = "blue", vertex.size = 8, vertex.frame.color = "green", vertex.label.font = 3, vertex.label.cex = 0.7, vertex.label.dist = 1.5, vertex.label.color = "black", edge.curved = TRUE, edge.width = 0.2, main = "Graph of characters from les Miserables - fruchterman.reingold")
+
+```
+
+#### b)
+
+```{r}
+size = gsize(misgraph)
+order = gorder(misgraph)
+dens = edge_density(misgraph)
+diam = diameter(misgraph, weights = NULL)
+```
+
+
+The graph in question is undirected, its size is `r size`, order `r order`, density `r dens` and diameter `r diam`. 
+
+#### c)
+
+```{r}
+set.seed (3)
+V(misgraph)$label.cex <- (degree(misgraph)+10) / max(degree(misgraph))
+l <- layout_with_fr(misgraph)
+```
+
+This code sets the size of the label of a vertex depending on its degree. Its affect on the plot can be seen in the following plot.
+
+```{r}
+plot.igraph(misgraph, layout = layout.fruchterman.reingold, vertex.color = "red", edge.color = "blue", vertex.size = 8, vertex.frame.color = "green", vertex.label.font = 3, vertex.label.dist = 1.5, vertex.label.color = "black", edge.curved = TRUE, edge.width = 0.2, main = "Graph of characters from les Miserables - fruchterman.reingold")
+```
+
+## 2 Community detection
+
+### 2.1 Hierarchical agglomerative clustering
+
+#### a)
+
+In the beginning, all the vertices are considered to belong by themselves to their own cluster, at each step of the clustering the two "closest" clusters with regard to a certain metric are joined. The vertex-vertex, cluster-vertex and cluster-cluster metric must be defined.
+
+#### b)
+
+```{r}
+dissim = 1 - similarity(misgraph)
+mishclust = hclust(as.dist(dissim))
+plot(mishclust)
+```
+
+#### c)
+
+The following code cuts the cluster dendrogram from previous part so that the graph is divided into $i$ communities, where $i$ goes from 1 to 10. For each of these divisions the modularity is calculated and plotted.
+
+```{r}
+mod = c()
+for (i in 1:25){
+  labels = cutree(mishclust, i)
+  mod[i] = modularity(x = misgraph , membership = labels)
+}
+plot ( mod , type ="l", main = "Modularity depending on number of communities", ylab = "Modularity", xlab = "Number of Communities")
+```
+Based on the plot, the best number of communities to divide the graph into is around 12. The modularity rises slightly for number of clusters going up to 16, but its increase is not significant enough to balance out higher complexity coming from higher number of communities.
+
+#### d)
+
+```{r}
+labels = cutree(mishclust, 12)
+V(misgraph)$color = labels
+plot.igraph(misgraph, layout = layout.fruchterman.reingold,  edge.color = "blue", vertex.size = 9 ,vertex.label.font = 3, vertex.label.dist = 1.5, vertex.label.color = "black", edge.curved = TRUE, edge.width = 0.2, main = "Graph of characters from les Miserables - fruchterman.reingold")
+#edge_density(misgraph[labels[1]])
+```
+
+
+
+
+
+#### e)
+
+```{r}
+plot(mishclust, labels=labels)
+```
+
+
+
+#### f)
+
+```{r}
+mishclustAve = hclust(as.dist(dissim), method = "average")
+mishclustSin = hclust(as.dist(dissim), method = "single")
+modAve = c()
+modSin = c()
+for (i in 1:25){
+  labelsAve = cutree(mishclustAve, i)
+  labelsSin = cutree(mishclustSin, i)
+  modAve[i] = modularity(x = misgraph , membership = labelsAve)
+  modSin[i] = modularity(x = misgraph , membership = labelsSin)
+}
+plot (mod, type ="l",main = " Comparison of different linkage option for aglomerative clustering", ylab = "Modularity", xlab = "Number of Communities")
+lines(modAve, type = "l", col = "red")
+lines(modSin, type = "l", col = "blue")
+legend(x = "bottomright", legend = c("Complete linkage","Average linkage","Single linkage"), col = c("black","red","blue"),pch = "|")
+```
+
+
+## 2.2 Edge betweenness
+
+#### a)
+We introduce the term of edge betweennes which is for each edge defined as the number of shortest paths between a pair of nodes that is passing through that edge. This metric favors the edges between two communities since the vertices from two different clusters are not as strongly connected and so the shortest path between them must go through a chokepoint, which can then be removed in a divise hierarchical clustering algorithm.
+
+#### b) 
+
+```{r}
+mis_edgeb = cluster_edge_betweenness(misgraph)
+plot(as.dendrogram(mis_edgeb), main = "Dendrogram of the Edge Betweenness divisive clustering")
+print(mis_edgeb)
+```
+```{r}
+plot(mis_edgeb,misgraph)
+```
+
+
+
+#### c)
+
+```{r}
+f <- function (i){
+mis_graph2 = delete.edges(misgraph, mis_edgeb$removed.edges[seq(length = i)])
+cl = clusters(mis_graph2)$membership
+modularity(misgraph, cl)
+}
+mods = sapply (0:ecount(misgraph), f)
+mis_graph2 <- delete.edges(misgraph, mis_edgeb$removed.edges[seq(length = which.max(mods) - 1)])
+
+plot(mis_graph2)
+```
+
+## 2.3 Spectral clustering and the Louvain algorithm
+
+```{r}
+misLouvain = cluster_louvain(misgraph)
+print(misLouvain)
+plot(misLouvain,misgraph)
+```
+
+6 communities found.
+
+```{r}
+misLeadingeigen = cluster_leading_eigen(misgraph)
+print(misLeadingeigen)
+plot(misLeadingeigen,misgraph)
+```
+
+8 communities found.
+
+
+
+
+

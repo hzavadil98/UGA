@@ -1,0 +1,241 @@
+---
+title: "TP2"
+author: "Elliott Perryman, Jan Zavadil, Ignat Sabaev"
+date: "1/3/2022"
+output:
+  html_document: default
+---
+## 1 Data
+```{r, echo=F}
+NAm2 = read.table("NAm2.txt", header=TRUE)
+names = unique ( NAm2 $ Pop )
+npop = length ( names )
+coord = unique ( NAm2 [ ,c("Pop", "long", "lat" )]) # coordinates for each pop
+colPalette =rep (c("black","red","cyan","orange","brown","blue","pink", "purple","darkgreen") ,3)
+pch = rep(c(16 ,15 ,25) , each =9)
+plot ( coord [,c("long","lat")] , pch = pch , col = colPalette , asp =1)
+# asp allows to have the correct ratio between axis longitude
+# and latitude , thus the map is not deformed
+legend ("bottomleft",legend =names , col = colPalette , lty = -1 , pch = pch , cex =0.75 , ncol =2 , lwd =2)
+library ( maps ); map ("world",add =T )
+title("Locations of Different People")
+```
+
+The code above takes the data stored in NAm2, it takes the names and location of all the indian populations (all the individuals from a single population have the same location in the data) and plots them over the map of the Americas. It does so using *unique* command, which returns all the unique rows from a given vector/DataFrame.
+
+## 2 Regression
+
+```{r, echo=F}
+NAaux = NAm2[,-c(1:7)]
+
+fit = lm(formula = long ~ ., NAaux)
+
+options(max.print=50)
+summary(fit)
+options(max.print=1000)
+
+```
+The linear model does not return valid results since the number of observations is lower than the number of predictors.
+
+## 3 PCA
+
+#### a)
+
+Principle Component Analysis is a statistical method used to lower dimension of observed data. It aims to represent the data in low dimensions while keeping as much variance (and therefore information) in the data as possible. 
+
+#### b)
+In this case the scaling option of *prcomp* function should not be used. All the variable are of value 0 or 1, therefore any difference in variance between them is a valuable information which would be lost by scaling the data.
+
+#### c)
+```{r, echo=F, fig.height=5, fig.width=5}
+pcaNAm2 = prcomp(NAaux[,2:length(NAaux)], scale.=T)
+caxes =c(1 ,2)
+plot ( pcaNAm2 $x [, caxes ] ,col ="white")
+for ( i in 1: npop )
+{
+#print ( names [i ])
+lines ( pcaNAm2 $x [ which ( NAm2 [ ,3]== names [ i ]) , caxes ] , type ="p",
+col = colPalette [i ], pch = pch [ i ])
+#legend ("top",legend =names , col = colPalette ,
+#        lty = -1 , pch = pch , cex =0.75 , ncol =3 , lwd =2);
+}
+title("PCA using scaling")
+
+```
+
+
+```{r, echo=F, fig.height=5, fig.width=5}
+pcaNAm2 = prcomp(NAaux[,2:length(NAaux)], scale.=F)
+caxes =c(1 ,2)
+plot ( pcaNAm2 $x [, caxes ] ,col ="white")
+for ( i in 1: npop )
+{
+#print ( names [i ])
+lines ( pcaNAm2 $x [ which ( NAm2 [ ,3]== names [ i ]) , caxes ] , type ="p",
+col = colPalette [i ], pch = pch [ i ])
+#legend ("top",legend =names , col = colPalette ,
+#        lty = -1 , pch = pch , cex =0.75 , ncol =3 , lwd =2);
+}
+title("PCA without using scaling")
+```
+
+From these figures, we can say that, while there are some populations with distinguishable genetical markers (Ache, Surui), the majority of individuals create a big shared cluster and therefore it will be quite difficult to distinguish between certain populations.
+
+#### d)
+
+```{r, echo=F}
+importance = summary(pcaNAm2)$importance[2,]
+factors = 1:length(importance)
+plot(1:length(importance), importance, col="gold", type = "b",main ="Proportion of total variance as a vs. principle direction number",ylab = "Explained variance", xlab = "Number of principle component")
+```
+
+The first two principal directions capture $98.482$% of total variance. To represent the genetic markers by a minimal number of components one might use only the first two component, since they capture almost all the variance in data. However if we wanted to improve precision we would use around 15 components, as seen in previous figure, the explained variance does not increase significantly with higher number of components.
+
+## 4 PCR (Principal components regression)
+
+#### a)
+
+```{r, echo=F, fig.height=5, fig.width=5}
+df_lat = data.frame(pcaNAm2$x[, 1:250])
+df_lat["lat"] = NAm2["lat"]
+df_long = data.frame(pcaNAm2$x[, 1:250])
+df_long["long"] = NAm2["long"]
+
+lmlong = lm(long ~ ., df_long)
+lmlat = lm(lat ~ ., df_lat)
+longitude = lmlong $ fitted.values
+latitude = lmlat $ fitted.values
+plot (longitude, latitude, col ="white", asp =1)
+for ( i in 1: npop ) {
+  #print ( names [i ])
+  longitude = lmlong $ fitted.values [ which ( NAm2 [ ,3]== names [i ])]
+  latitude =  lmlat $ fitted.values [ which ( NAm2 [ ,3]== names [i ])]
+  lines (longitude, latitude, type ="p", col = colPalette [ i], pch = pch [i ])
+}
+#legend ("bottomleft", legend=names , col=colPalette , lty=-1, pch = pch , cex =.75 , ncol =3 , lwd =2)
+map ("world", add=T)
+title("Linear Regression with 250 Principle Components")
+```
+
+If we compare this plot with the previous map we can see that the estimated locations of individuals of a certain population create a cluster of points which is usually centered around the original location of this population. This gives us certain hope to be able to find very approximate geographical origin of an unknown individual.
+
+#### b)
+
+
+```{r, echo=F, include=FALSE}
+library("fields")
+metric = function(lmLong, lmLat, validation=F, val_data=NULL) {
+  df1 = data.frame(NAm2["long"], NAm2["lat"])
+  if (validation) {
+    df2 = data.frame(predict.lm(lmLong, val_data), predict.lm(lmLat, val_data))
+  }
+  else {
+    df2 = data.frame(lmLong$fitted.values, lmLat$fitted.values)
+  }
+  total = 0
+  for (i in 1:length(NAm2["long"])) {
+    total = total + rdist.earth(df1[i,], df2[i,], miles=F)
+  }
+  total = total / length(NAm2["long"])
+  total
+}
+```
+```{r}
+metric(lmlong, lmlat)
+```
+
+The mean error of previous model is ~1,200 km.
+
+## 5 PCR and cross-validation
+
+### (a) 
+Cross validation is a method for comparing models. This is designed to help against the problem of overfitting. This divides the dataset into random samples, trains smaller models on the random subsets, and compares generalization power against unseen examples. Then the final model is trained on the entire dataset. For the PCR case, the model size is the number of principle components to include. This methodology uses 10 fold cross validation. THe results are shown below.
+
+```{r, echo=F, warning=FALSE}
+metric2 = function(lmLong, lmLat, X, mask) {
+  df1 = data.frame(NAm2[mask, "long"], NAm2[mask, "lat"])
+  df2 = data.frame(predict.lm(lmLong, X), predict.lm(lmLat, X))
+
+  total = 0
+  for (i in 1:length(NAm2["long"])) {
+    total = total + rdist.earth(df1[i,], df2[i,], miles=F)
+  }
+  total = total / length(NAm2["long"])
+  total
+}
+N = dim(NAm2)[1]
+labels = rep (1:10 , each=N)
+set.seed(0) # reproducibility
+set = sample (labels, N)
+training_error = seq(2,440,by=10)
+validation_error = seq(2,440,by=10)
+for (i in 1:44) {
+  training_error[i] = 0
+  validation_error[i] = 0
+  for (j in 1:10) {
+    naxes = seq(2, 440, by=10)[i]
+    mask = which(set != j)
+    X = pcaNAm2$x[mask, 1:naxes]
+    df1 = data.frame(X)
+    df1["long"] = NAm2[mask, "long"]
+    lmlong = lm(long ~ ., df1)
+    
+    df2 = data.frame(X)
+    df2["lat"] = NAm2[mask, "lat"]
+    lmlat = lm(lat ~ ., df2)
+    
+    training_error[i] = training_error[i] + metric2(lmlong, lmlat, df1, mask)
+    mask = which(set==j)
+    validation_error[i] = validation_error[i] + metric2(lmlong, lmlat, data.frame(pcaNAm2$x[mask, 1:naxes]), mask)
+  }
+  validation_error[i] = validation_error[i]/10
+  training_error[i] = training_error[i]/10
+}
+
+```
+
+
+```{r, echo=F}
+plot(seq(2,440,by=10), training_error, col="gold", type = "b",main ="Error as a function of #PC", ylab = "Mean Error (km)", xlab = "Number of principle components")
+lines(seq(2,440,by=10), validation_error, type = "b",col="blue")
+legend("topright", c("training","validation"), fill=c("gold","blue"))
+```
+
+Looking at the training and mean validation error, it seems that the model with 52 principle components is best. This model has the lowest validation error and seems to have fairly low number of principle components. The output of this model is shown below. 
+
+
+```{r, echo=F, fig.height=5, fig.width=5}
+df_lat = data.frame(pcaNAm2$x[, 1:52])
+df_lat["lat"] = NAm2["lat"]
+df_long = data.frame(pcaNAm2$x[, 1:52])
+df_long["long"] = NAm2["long"]
+
+lmlong = lm(long ~ ., df_long)
+lmlat = lm(lat ~ ., df_lat)
+longitude = lmlong $ fitted.values
+latitude = lmlat $ fitted.values
+plot (longitude, latitude, col ="white", asp =1)
+for ( i in 1: npop ) {
+  #print ( names [i ])
+  longitude = lmlong $ fitted.values [ which ( NAm2 [ ,3]== names [i ])]
+  latitude =  lmlat $ fitted.values [ which ( NAm2 [ ,3]== names [i ])]
+  lines (longitude, latitude,  type ="p", col = colPalette [ i], pch = pch [i ])
+}
+#legend ("bottomleft", legend=names , col=colPalette , lty=-1, pch = pch , cex =.75 , ncol =3 , lwd =2)
+map ("world", add=T)
+title("Final linear regression model")
+```
+
+The mininum validation error is ~800 km for this model.
+
+```{r}
+min(validation_error)
+```
+
+
+## 6
+
+In conclusion, we used cross validation to choose the number of dimensions to use in PCR (52), and implemented PCR with these 52 dimensions. The final average prediction error is about 800 km. The final model thus gives us a possibility to roughly estimate the origin of a new individual based on his genetical markers. This model could be improved by increasing the number of training data.
+
+
+

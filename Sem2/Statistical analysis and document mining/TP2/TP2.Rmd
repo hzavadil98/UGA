@@ -1,0 +1,159 @@
+---
+title: "Statistical Analysis and Document Mining TP2"
+author: "Elliott Perryman, Jan Zavadil, Ignat Sabaev"
+date: "1/3/2022"
+output: html_document
+---
+## 1 Data
+
+
+```{r}
+NAm2 = read.table("NAm2.txt", header=TRUE)
+names = unique ( NAm2 $ Pop )
+npop = length ( names )
+coord = unique ( NAm2 [ ,c("Pop", "long", "lat" )]) # coordinates for each pop
+colPalette =rep (c("black","red","cyan","orange","brown","blue","pink", "purple","darkgreen") ,3)
+pch = rep(c(16 ,15 ,25) , each =9)
+plot ( coord [,c("long","lat")] , pch = pch , col = colPalette , asp =1)
+# asp allows to have the correct ratio between axis longitude
+# and latitude , thus the map is not deformed
+legend ("bottomleft",legend =names , col = colPalette , lty = -1 , pch = pch , cex =0.75 , ncol =2 , lwd =2)
+library ( maps ); map ("world",add =T )
+
+```
+
+The code above takes the data stored in NAm2, it takes the names and location of all the indian populations (all the individuals from a single population have the same location in the data) and plots them over the map of the Americas. It does so using *unique* command, which returns all the unique rows from a given vector/DataFrame.
+
+## 2 Regression
+
+```{r}
+NAaux = NAm2[,-c(1:7)]
+
+fit = lm(formula = long ~ ., NAaux)
+
+options(max.print=50)
+summary(fit)
+options(max.print=1000)
+
+``` 
+
+The linear model does not return valid results since the number of observations is lower than the number of predictors.
+
+
+
+## 3 PCA
+
+#### a)
+
+Principle Component Analysis is a statistical method used to lower dimension of observed data. It aims to represent the data in low dimensions while keeping as much variance (and therefore information) in the data as possible.
+
+#### b)
+
+```{r}
+GenDat = NAm2[,-c(1:8)]
+pcaNAm2 = prcomp(GenDat, scale. = TRUE)
+
+```
+
+#### c)
+
+```{r}
+caxes =c(1 ,2)
+plot ( pcaNAm2 $x [, caxes ] ,col ="white")
+for ( i in 1: npop )
+{
+print ( names [i ])
+lines ( pcaNAm2 $x [ which ( NAm2 [ ,3]== names [ i ]) , caxes ] , type ="p", col = colPalette [i ], pch = pch [ i ])
+legend ("topleft",legend =names , col = colPalette , lty = -1 , pch = pch , cex =0.75 , ncol =3 , lwd =2)
+}
+title("PCA with scaling")
+```
+
+
+
+```{r}
+pcaNAm2 = prcomp(GenDat, scale. = FALSE)
+
+caxes =c(1 ,2)
+plot ( pcaNAm2 $x [, caxes ] ,col =" white ")
+for ( i in 1: npop )
+{
+print ( names [i ])
+lines ( pcaNAm2 $x [ which ( NAm2 [ ,3]== names [ i ]) , caxes ] , type ="p", col = colPalette [i ], pch = pch [ i ])
+legend ("topleft",legend =names , col = colPalette , lty = -1 , pch = pch , cex =0.75 , ncol =3 , lwd =2)
+}
+title("PCA without scaling")
+```
+
+
+#### d)
+
+
+## 4 PCR
+
+#### a)
+
+```{r}
+longPCA = data.frame(NAm2[8],pcaNAm2$x[,1:250])
+latPCA = data.frame(NAm2[7],pcaNAm2$x[,1:250])
+lmlong = lm(long ~., longPCA)
+lmlat = lm(lat ~., latPCA)
+
+plot ( lmlong $ fitted.values , lmlat $ fitted.values , col =" white ", asp =1)
+for ( i in 1: npop )
+{
+print ( names [i ])
+lines ( lmlong $ fitted.values [ which ( NAm2 [ ,3]== names [i ])] ,
+lmlat $ fitted.values [ which ( NAm2 [ ,3]== names [i ])] ,
+type ="p", col = colPalette [ i], pch = pch [i ])
+}
+#legend ("bottomleft",legend =names , col = colPalette , lty = -1 , pch = pch , cex =.75 , ncol =3 , lwd =2)
+library ( maps ); map ("world",add =T )
+```
+
+#### b)
+```{r}
+library("fields")
+meanDist <- function(realloc,estloc){
+  mean(diag(rdist.earth.vec(realloc,estloc, miles = F)))
+}
+print(paste("The mean error of the model using 250 predictors is ", meanDist(NAm2[,7:8],data.frame(lmlong$fitted.values,lmlat$fitted.values))))
+
+```
+
+
+## 5 PCR and cross validation
+
+#### a)
+
+#### b)
+
+#### c)
+
+#### d)
+
+
+## 6 Conclusion
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

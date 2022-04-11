@@ -1,0 +1,28 @@
+---
+title: "TP1 - Daria"
+output: html_document
+---
+
+```{r}
+library(mlbench)
+data(PimaIndiansDiabetes2)
+d = data.frame(PimaIndiansDiabetes2)
+set.seed(0)
+sum(is.na(d)/dim(d)[1]/dim(d)[2])
+sum(d[,'diabetes'] == 'pos')
+sum(d[,'diabetes'] == 'neg')
+
+```
+
+## Q1 
+
+We only have numerical features. Binary classification.9% of missing values. 268 positive, 500 negative. 
+
+
+```{r}
+source('aux_functions.r')
+x = PimaIndiansDiabetes2[,-9]
+y = PimaIndiansDiabetes2[,9]
+y = negative_positive_class_labels(y)
+```
+

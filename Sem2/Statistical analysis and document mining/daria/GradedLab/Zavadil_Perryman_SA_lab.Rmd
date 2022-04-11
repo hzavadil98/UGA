@@ -1,18 +1,17 @@
 ---
-title: "DariaLab"
+title: "Statistical Analysis and Document Mining Complementary lab"
+author: "Elliott Perryman, Jan Zavadil"
+date: "12.4.2022"
 output: html_document
 ---
-```{r cache=TRUE}
+```{r, include=F, echo=F}
 rm(list=ls())
-set.seed(0) # reproducibility
-# load libraries
+set.seed(0)
 library("nnet")
 library("MASS")
 library("class")
 library("naivebayes")
-# set some handy defines
 MAX_ITER = 10
-#labels = c("NorthAmerica", "CentralAmerica", "SouthAmerica")
 
 
 word_count_train <- read.csv("word_count_train.csv") 
@@ -22,54 +21,98 @@ tfidf_test <- read.csv("tfidf_test.csv")
 options(max.print=50)
 ```
 
-```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+
+## Question 1:
+Storing a score for every word in every document using a dense matrix uses (N x M) values, where N is the number of words in the dictionary and M is the number of documents. This is wasteful because most documents only use a small subset of words compared to the overall dictionary. This is remedied by using sparse matrix representations which store indices and values for only non-zero elements of the matrix. This increases the cost per element of the matrix, but is efficient for sufficiently sparse matrices. For example, storing (i,j,A_ij) pairs is more efficient when a matrix has more than 2/3 of its values = 0. This is not unreasonable when dealing with a dictionary of say 5,000 words to expect that maybe a single document could use 1,000 words or so. 
+
+## Question 2:
+```{r, include=T, echo=F}
+dimension = dim(word_count_train)[2] 
+most_frequent = names(word_count_train)[which.max(word_count_train[7,])[1]]
+counts = word_count_train[7,most_frequent]
+aaaand_counter = sum(word_count_train[,"aaaand"])
 ```
 
-## questions
-1 dense matrices require large amounts of memory, we could use sparse matrix forms instead
+* The vocabulary size is 19159.
+* The most frequent word in 7th review is "the" which appears 7 times. This adds a useless word to the problem, increasing the computational complexity and not improving results.
+* "aaaand" only appears once. It should be simplified to "and", which should be in the stopwords list and ignored.
 
+## Question 3:
 
-2.1 19164
-2.2 "the" appears 7 times. this adds a useless word to the problem, increasing the computational complexity, introducing bias, and not improving results.
-2.3 "aaaand" appears once. it should be simplified to "and", which should be in the stopwords list and ignored.
+* Laplace smoothing avoids numerical problems. In naive Bayes, the probability of a word given a classification is 0 if there are no observations with that word and classification. This means that dealing with unseen words can set the overall probability to 0. Laplace smoothing replaces this 0 with a small number, essentially applying Cromwell's rule. This smoothing term decreases with increasing dictionary, as a larger dictionary implies that if this word was important, it would have been seen before. 
 
-3.1 laplace smoothing avoids numerical instability when a word has not been seen before for a specific class
-```{r}
-fit = multinomial_naive_bayes(x=word_count_train[,-c(1)], y=as.factor(word_count_train[,1]), data = word_count_train, laplace=1)
+```{r, include=T, echo=T, message = F, warning=F}
+fit = multinomial_naive_bayes(x=word_count_train[,-c(1)], y=as.factor(word_count_train[,1]), data = word_count_train, laplace = 1)
 ```
+* In the previous chunk the model is trained with Laplacian parameter equal to 1.
 
 
-```{r}
+```{r, include=F, echo=T}
 pred_train = predict(fit, as.matrix(word_count_train[, -c(1)]))
 pred_test = predict(fit, as.matrix(word_count_test[, -c(1)]))
 ```
+* The labels are predicted for both training and testing datasets.
 
-
-```{r}
-1 - sum(pred_train == word_count_train[, "y"])/1000
-1 - sum(pred_test == word_count_test[, "y"])/250
+```{r, include=T, echo=T}
+trainerr = 1 - sum(pred_train == word_count_train[, "y"])/1000
+testerr = 1 - sum(pred_test == word_count_test[, "y"])/250
+c(trainerr, testerr)
 ```
-```{r}
+* The misclassification error computed as percentage of incorrectly classified reviews was computed for both datasets. For training dataset the error is 2.4%, for test dataset it is 16.4%. The difference is caused by overfitting the model on the training dataset anyway the accuracy of naive bayes classifier on test dataset is still quite high.
+
+## Question 4:
+
+```{r, include=T, echo=T}
+positive_train = sum(tfidf_train[,1])
+negative_train = dim(tfidf_train)[1]-sum(tfidf_train[,1])
+positive_test = sum(tfidf_test[,1])
+negative_test = dim(tfidf_test)[1]-sum(tfidf_test[,1])
+```
+* In the training set there are 491 positive reviews, 509 negative ones. In the test set there are 116 positive and 134 negative reviews.
+
+```{r, include=T, echo=F}
+library("Matrix")
+negrev = tfidf_train[tfidf_train[,"y"]==0,]
+negrev = data.frame(colSums(negrev[,-1]))
+m1 = which.max(negrev[,1])
+m2 = which.max(negrev[-c(m1),1])
+m3 = which.max(negrev[-c(m1,m2),1])
+print(rownames(negrev)[c(m1,m2,m3+2)])
+```
+* The three most important words for negative reviews are "movie", "bad" and  "you". First two words probably usually appear together - the simplest negative review possible is just "Bad movie". The word you on the other hand has so high tf-idf because it is very common in all text, it is probably very important for the positive reviews as well.
+
+## Question 5:
+
+The cumulative sum of the explained variance is shown below. As shown in the figure, 700 features explains nearly 100% of the variance, so it is unlikely that the PCA is reducing the dimension too much.
+```{r, include=T, echo=F}
 pcaFit = prcomp(tfidf_train[,-c(1)], scale.=F)
 pca_train = predict(pcaFit, tfidf_train)
 pca_test  = predict(pcaFit, tfidf_test)
+plot(100*cumsum(summary(pcaFit)$importance[2,]), col="gold", type="b", main="Variance Explained vs. Number of Principle Components", ylab="Variance Explained", xlab="Number of components")
 ```
 
-```{r}
+* All the observations are transormed using model obtained by applying PCA on train dataset. In the figure above, the explained variance of the model is plotted against the number of principal components included.
+
+```{r, include=T, echo=T}
 df = data.frame(pca_train[, 1:700])
 df["y"] = tfidf_train[, "y"]
 fit = lda(formula=y~., data=df)
 ```
+* LDA is fit on training dataset using only the first 700 principal components.
 
-
-```{r}
+```{r, include=T, echo=F}
 pred_train = predict(fit, df)
 df2 = data.frame(pca_test[, 1:700])
 pred_test = predict(fit, df2)
 ```
+* Using the fitted model we predict the labels for both train and test datasets.
 
-```{r}
-1 - sum(pred_train$class==df[, "y"]) / 1000
-1 - sum(pred_test$class==tfidf_test[, "y"]) / 250
+
+```{r, include=T, echo=T}
+trainerr = 1 - sum(pred_train$class==df[, "y"]) / 1000
+testerr = 1 - sum(pred_test$class==tfidf_test[, "y"]) / 250
+c(trainerr, testerr)
 ```
+
+* The misclassification error on the training dataset is 0.7%, on the test dataset it is 18%. Compared with the naive Bayes approach the misclassification error shrunk on the training dataset, while on the test dataset it grew slightly. This implies higher overfitting of the model to the training data than in the first model.
+

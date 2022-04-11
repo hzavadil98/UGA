@@ -1,0 +1,286 @@
+---
+title: "TP3"
+author: "Elliott Perryman, Jan Zavadil, Ignat Sabaev"
+date: "3/14/2022"
+output: html_document
+---
+ 
+## 1.
+  The first step of this lab is to load in the data from NAm2.txt and check that it has sensible labels. After this, the countries are converted into North America, South America, and Central America. Truncated output for both of these is shown below. In this first setup, the random seed is set to 0, and a random set for 10 fold cross validation is created.
+  
+```{r, include=T, echo=F}
+rm(list=ls())
+set.seed(0) # reproducibility
+# load libraries
+library("nnet")
+library("MASS")
+library("class")
+library("naivebayes")
+# set some handy defines
+MAX_ITER = 10
+#labels = c("NorthAmerica", "CentralAmerica", "SouthAmerica")
+NAm2 = read.table("NAm2.txt")
+N = dim(NAm2)[1] # define some consts
+M = dim(NAm2)[2]
+# generate sets for each observation
+set = sample (rep (1:10 , each=N), N)
+options(max.print=50)
+
+crossValidator <- function (df, X, y_name, set, fitter, predictor, step=10, x_range=NULL){
+  N = dim(X)[1]
+  M = dim(X)[2]
+  if (is.null(x_range)) {x_range = seq(2,M,step)}
+  S = max(unique(set))
+  
+  xlen = length(x_range)
+  training_error = 1:xlen
+  validation_error = 1:xlen
+  training_stderr = 1:xlen
+  validation_stderr = 1:xlen
+  for (i in 1:xlen) {
+    training_error[i] = 0
+    training_stderr[i] = 0
+    validation_error[i] = 0
+    validation_stderr[i] = 0
+    for (j in 1:S) {
+      mask_train = which(set != j)
+      mask_valid = which(set == j)
+      
+      X_train = data.frame(X[mask_train, 1:x_range[i]])
+      X_train[y_name] = df[mask_train, y_name]
+      X_valid = data.frame(X[mask_valid, 1:x_range[i]])
+      
+      fit = fitter(X_train)
+      
+      pred_train = predictor(fit, X_train)
+      pred_valid = predictor(fit, X_valid)
+      err_train = pred_train!=df[mask_train,y_name]
+      err_valid = pred_valid!=df[mask_valid,y_name]
+      
+      training_error[i] = training_error[i] + sum(err_train)/dim(X_train)[1]
+      training_stderr[i] = training_stderr[i] + sqrt(var(err_train))/dim(X_train)[1]
+      validation_error[i] = validation_error[i] + sum(err_valid)/dim(X_valid)[1]
+      validation_stderr[i] = validation_stderr[i] + sqrt(var(err_valid))/dim(X_valid)[1]
+    }
+    training_error[i] = training_error[i] / S
+    training_stderr[i] = training_stderr[i] / S
+    training_stderr[i] = sqrt((1./dim(X_valid))**2 + training_stderr**2)
+    validation_error[i] = validation_error[i] / S
+    validation_stderr[i] = validation_stderr[i] / S
+    validation_stderr[i] = sqrt((1./dim(X_valid))**2 + validation_stderr**2)
+
+  }
+  result = {}
+  result$x_range = x_range
+  result$train_err = training_error
+  result$train_std = training_stderr
+  result$valid_err = validation_error
+  result$valid_std = validation_stderr
+  return (result)
+}
+plotter = function(result, scale=1) {
+  plot(result$x_range, scale*result$train_err, col="gold", type = "b",
+       main ="Error as a function of #PC", ylab = "Mean Error (% wrong)", xlab = "Number of principle components")
+  arrows(result$x_range, scale*(result$train_err-result$train_std), 
+         result$x_range, scale*(result$train_err+result$train_std), length=0.05, angle=90, code=3)
+  
+  lines(result$x_range, scale*result$valid_err, type = "b",col="blue")
+  
+  arrows(result$x_range, scale*(result$valid_err-result$valid_std), 
+         result$x_range, scale*(result$valid_err+result$valid_std), length=0.05, angle=90, code=3)
+  
+  legend("topright", c("training","validation"), fill=c("gold","blue"))
+}
+multinomPred = function(f, x) {
+  predict(f,x)
+}
+ldaPred = function(f, x) {
+  predict(f,x)$class
+}
+NVPred= function(f, x) {
+  predict(f,x)
+}
+
+NAm2[1:4,1:9]
+```
+
+As shown above, the columns have proper names.
+
+```{r, include=F, echo=F}
+cont <- function (x ){
+if(x %in% c("Canada"))
+  cont <- "NorthAmerica"
+else if( x %in% c("Guatemala", "Mexico", "Panama ", "CostaRica"))
+  cont <-"CentralAmerica"
+else
+  cont <-"SouthAmerica"
+return ( factor ( cont ))
+}
+contID <- sapply (as.character ( NAm2 [ ,4]) , FUN = cont )
+```
+
+  
+### 2.a)
+
+Next, we map the individuals to North American continents (using North, Central, South) and fit multinomial regression on the entire dataset. The default parameters of multinomial regression give an error though: without increasing the maximum number of weights to 1800 and setting maximum iterations to 200, the code throws an error saying "Error in nnet.default ...too many (17133) weights." This problem comes from the same source as the problem with the linear regression, that is that the width of the data matrix X is larger than the height of the data X. After fitting the model, we compute the confusion matrix over the entire dataset, which was used for training.
+
+```{r, include=F, echo=F}
+NAcont <- cbind ( contID = contID , NAm2 [ , -(1:8)])
+NAcont [ ,1] <- factor ( NAcont [ ,1])
+
+#fit = multinom(formula = contID ~ ., data = NAcont)
+fit = multinom(formula = contID ~ ., data = NAcont, MaxNWts=18000, maxit=MAX_ITER);
+```
+```{r, include=T, echo=F}
+table(pred=multinomPred(fit,NAcont), true=NAcont[, "contID"])
+```
+The regression gives no mistakes, since we are evaluating it on its training set.
+
+### 2.b)
+
+Now we compute PCA on the data and use all the principle components for multinomial regression. Like the example above, there are no mistakes, shown in the confusion matrix below.
+```{r, include=F, echo=F}
+pcaNAm2 = prcomp(NAcont[,2:length(NAcont)], scale.=F)
+X = data.frame(pcaNAm2$x)
+X["contID"] = NAcont[, "contID"]
+fit = multinom(formula = contID ~ ., data = X, MaxNWts=18000, maxit=MAX_ITER);
+```
+```{r, include=T, echo=F}
+table(pred=multinomPred(fit,X), true=NAcont[, "contID"])
+```
+
+### 2.c)
+Now using a 10-fold cross-validation, a course grid search (step size 10) is run over the different number of principle components to include in the multinomial regression. The validation and training errors are shown below.
+
+```{r, include=F, echo=F}
+courseResults = crossValidator(NAcont, pcaNAm2$x, "contID", set,function(x){multinom(contID~.,x,MaxNWts=18000,maxit=MAX_ITER)}, multinomPred)
+```
+```{r, include=T, echo=F}
+plotter(courseResults, scale = 100)
+```
+
+So it seems that the optimal number of principle components is in the mid 100s. A fine grid search in the neighborhood of the minimum of the validation data will reveal the precise minimal number of principle components
+
+```{r, include=F, echo=F}
+fineGrid = courseResults$x_range[which.min(courseResults$valid_err)] + (-9):9
+fineResults = crossValidator(NAcont, pcaNAm2$x, "contID", set, function(x){multinom(contID~.,x,MaxNWts=18000,maxit=MAX_ITER)}, function(f,x){predict(f,x)},x_range=fineGrid)
+min_naxes = fineResults$x_range[which.min(fineResults$valid_err)]
+min_val = min(fineResults$valid_err)
+```
+The number of axes that minimizes the validation error is given by:
+```{r, echo=F, include=T}
+min_naxes
+```
+And on average, the % of mistakes made is given by:
+```{r, echo=F, include=T}
+min_val*100
+```
+### 2.d)
+
+Now the logistic regression is repeated with the optimal number of principle components. This also makes no mistakes on the training data (the entire dataset), as expected.
+```{r, include=F, echo=F}
+fit = multinom(formula = contID ~ ., data = X[,1:min_naxes], MaxNWts=18000, maxit=MAX_ITER);
+```
+```{r, include=T, echo=F}
+table(pred=multinomPred(fit,X), true=NAcont[, "contID"])
+```
+## 3
+
+Now the same procedure is repeated for Linear Discriminant Analysis (LDA). First, we compute the fit over all the data and its confusion matrix.
+```{r, include=F, echo=F}
+fit = lda(formula = contID ~ ., data = NAcont)
+```
+```{r, include=T, echo=F}
+table(pred=ldaPred(fit,NAcont), true=NAcont[, "contID"])
+```
+
+Then this is repeated with principle components instead of the raw data.
+```{r, include=F, echo=F}
+fit = lda(formula = contID ~ ., data = X, tol=1e-25);
+```
+```{r, include=T, echo=F}
+table(pred=ldaPred(fit, X), true=NAcont[, "contID"])
+```
+Now using a 10-fold cross-validation, a course grid search (step size 10) is run over the different number of principle components to include in the multinomial regression. The validation and training errors are shown below.
+
+```{r, include=F, echo=F}
+courseResults = crossValidator(NAcont, pcaNAm2$x, "contID", set, function(x){lda(contID~.,x)}, ldaPred)
+```
+```{r, include=T, echo=F}
+plotter(courseResults, scale = 100)
+```
+
+So it seems that the optimal number of principle components is near 100. A fine grid search in the neighborhood of the minimum of the validation data will reveal the precise minimal number of principle components
+
+```{r, include=F, echo=F}
+fineGrid = courseResults$x_range[which.min(courseResults$valid_err)] + (-9):9
+fineResults = crossValidator(NAcont, pcaNAm2$x, "contID", set, function(x){lda(contID~.,x)}, ldaPred,x_range=fineGrid)
+min_naxes = fineResults$x_range[which.min(fineResults$valid_err)]
+min_val = min(fineResults$valid_err)
+```
+The number of axes that minimizes the validation error is given by:
+```{r, echo=F, include=T}
+min_naxes
+```
+And on average, the % of mistakes made is given by:
+```{r, echo=F, include=T}
+min_val*100
+```
+
+Now LDA is repeated with the optimal number of principle components. This makes only a few mistakes on the data, much better than the original and using ~1/4 of the data. Compared to the full PCA this makes some more mistakes, but this is likely overfitting on the full PCA.
+```{r, include=F, echo=F}
+fit = lda(formula = contID ~ ., data = X[,1:min_naxes]);
+```
+```{r, include=T, echo=F}
+table(pred=ldaPred(fit,X), true=NAcont[, "contID"])
+```
+
+
+## 4.
+```{r, include=F, echo=F}
+fit = naive_bayes(formula = contID ~ ., data = NAcont, laplace=1)
+```
+```{r, include=T, echo=F}
+table(pred=NVPred(fit,NAcont), true=NAcont[, "contID"])
+```
+```{r, include=F, echo=F}
+fit = naive_bayes(formula = contID ~ ., data = X, tol=1e-25);
+```
+```{r, include=T, echo=F}
+table(pred=NVPred(fit, X), true=NAcont[, "contID"])
+```
+
+Now using a 10-fold cross-validation, a course grid search (step size 10) is run over the different number of principle components to include in the multinomial regression. The validation and training errors are shown below.
+
+```{r, include=F, echo=F}
+courseResults = crossValidator(NAcont, pcaNAm2$x, "contID", set, function(x){naive_bayes(contID~.,x)}, NVPred)
+```
+```{r, include=T, echo=F}
+plotter(courseResults, scale = 100)
+```
+
+So it seems that the optimal number of principle components is in the mid 100s. A fine grid search in the neighborhood of the minimum of the validation data will reveal the precise minimal number of principle components
+
+```{r, include=F, echo=F}
+fineGrid = courseResults$x_range[which.min(courseResults$valid_err)] + (-9):9
+fineResults = crossValidator(NAcont, pcaNAm2$x, "contID", set, function(x){naive_bayes(contID~.,x)}, NVPred,x_range=fineGrid)
+min_naxes = fineResults$x_range[which.min(fineResults$valid_err)]
+min_val = min(fineResults$valid_err)
+```
+The number of axes that minimizes the validation error is given by:
+```{r, echo=F, include=T}
+min_naxes
+```
+And on average, the % of mistakes made is given by:
+```{r, echo=F, include=T}
+min_val*100
+```
+
+Now the Naive Bayes is repeated with the optimal number of principle components. 
+```{r, include=F, echo=F}
+fit = naive_bayes(formula = contID ~ ., data = X[,1:min_naxes]);
+```
+```{r, include=T, echo=F}
+table(pred=NVPred(fit,X), true=NAcont[, "contID"])
+```
+

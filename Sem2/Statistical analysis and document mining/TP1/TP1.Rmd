@@ -4,7 +4,7 @@ output: html_document
 ---
 ### Jan Zavadil, Elliott Perryman, Ignat Sabaev
 
-### Part 1:
+## Part 1:
 
 #### 1)
 ```{r}
@@ -82,3 +82,97 @@ The only difference we see is lower precision in parameter estimation and remark
 summary(lm(Y ~ .,data = dat))
 ```
 There is a high correlation between $X_1$ and $X_2$, which causes them both to be evaluated as unimportant to explain the model.
+
+
+
+
+
+## Part 2
+
+```{r}
+
+prostateCancer<- read.table("./prostate.data", header=T)
+attach(prostateCancer)
+pro<- data.frame(prostateCancer)
+drop <- c("train")
+pro = pro[,!(names(pro) %in% drop)]
+
+```
+
+
+### 3. Best subset selection
+
+#### a)
+First model is $lcavol = \beta_0 + \varepsilon$. It is a model of size O.
+```{r}
+model = lm(lcavol ∼ 1, data=pro)
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+
+Following model is $lcavol = \beta_1 lbph + \beta_2 lpsa + \varepsilon$. It is a model of size 2.
+```{r}
+model = lm(lcavol ∼ ., data=pro[,c(1,4,9)])
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+
+
+
+The last model is $lcavol = \beta_1 lweight + \beta_2 lpsa + \varepsilon$. It is a model of size 2.
+```{r}
+model = lm(lcavol ∼ ., data=pro[,c(1,2,9)])
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+The lowest residual sum of squares, as well as the highest value of F-test, is observed with the second implemented model.
+
+#### b)
+
+```{r}
+comb = combn(8,2)
+for (i in 1:28) {
+  vect = c(1,comb[1,i]+1,comb[2,i]+1)
+  print(paste(" RSS for combination - ",comb[1,i]+1 ,",",comb[2,i]+1," is ",deviance(lm(lcavol ∼ ., data=pro[,vect]))))
+}
+```
+The lowest RSS (~47) is reached with combination of predictors 6 and 9 (lcp, lpsa).
+
+
+#### c)
+
+In the following code we compute the minimal RSS for each size of the model between 0 and 8. In the figure below, the minimal RSS is plotted against the size of model.
+```{r}
+minRSS <- 1:8
+lowest <- list()
+for (j in 1:8) {
+  comb = combn(8,j)
+  dev <- 1:length(comb[1,])
+  for (i in 1:length(comb[1,])) {
+    vect = c(1,comb[,i]+1);
+    dev[i] = deviance(lm(lcavol ∼ ., data=pro[,vect]))
+  }
+  minRSS[j] = min(dev)
+  lowest[j] = list(comb[,which.min(dev)]+1)
+}
+minRSS = c(deviance(lm(lcavol ∼ 1, data=pro)),minRSS)
+
+plot(0:8,minRSS,type = "b",main ="RSS by number of predictors",xlab = "Number of predictors")
+
+
+```
+Further, we provide the list of predictors minimalizing the RSS for each size of the regression model.
+
+```{r}
+
+for (i in 1:8){
+  print(paste("Number of predictors: ",i,". Predictors minimalizing RSS: ",lowest[i]))
+}
+
+```
+
+#### d)
+We do not think that only minimizing the RSS is a good way to determine the optimal size of the regression model. That way, we would always chose the maximal size possible, as the RSS always decreases with higher size of model. It would be better to observe the decrease of RSS between each step up in size and once this difference is low enough (for example size = 2 in our case) we would call it the optimal size.
+
+
+

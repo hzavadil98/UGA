@@ -171,8 +171,8 @@ pre code {
 <div id="jan-zavadil-elliott-perryman-ignat-sabaev" class="section level3">
 <h3>Jan Zavadil, Elliott Perryman, Ignat Sabaev</h3>
 </div>
-<div id="part-1" class="section level3">
-<h3>Part 1:</h3>
+<div id="part-1" class="section level2">
+<h2>Part 1:</h2>
 <div id="section" class="section level4">
 <h4>1)</h4>
 <pre class="r"><code>set.seed(0)
@@ -319,6 +319,129 @@ summary(lm(Y ~ X1,data = dat))</code></pre>
 ## Multiple R-squared:  0.9494, Adjusted R-squared:  0.9349 
 ## F-statistic: 65.63 on 2 and 7 DF,  p-value: 2.92e-05</code></pre>
 <p>There is a high correlation between <span class="math inline">\(X_1\)</span> and <span class="math inline">\(X_2\)</span>, which causes them both to be evaluated as unimportant to explain the model.</p>
+</div>
+</div>
+<div id="part-2" class="section level2">
+<h2>Part 2</h2>
+<pre class="r"><code>prostateCancer&lt;- read.table(&quot;./prostate.data&quot;, header=T)
+attach(prostateCancer)
+pro&lt;- data.frame(prostateCancer)
+drop &lt;- c(&quot;train&quot;)
+pro = pro[,!(names(pro) %in% drop)]</code></pre>
+<div id="best-subset-selection" class="section level3">
+<h3>3. Best subset selection</h3>
+<div id="a" class="section level4">
+<h4>a)</h4>
+<p>First model is <span class="math inline">\(lcavol = \beta_0 + \varepsilon\)</span>. It is a model of size O.</p>
+<pre class="r"><code>model = lm(lcavol ∼ 1, data=pro)
+summary(model)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = lcavol ~ 1, data = pro)
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -2.69708 -0.83719  0.09691  0.77703  2.47099 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept)   1.3500     0.1197   11.28   &lt;2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 1.179 on 96 degrees of freedom</code></pre>
+<pre class="r"><code>paste0(&quot;Residual sum of squares is &quot;,deviance(model))</code></pre>
+<pre><code>## [1] &quot;Residual sum of squares is 133.359033889223&quot;</code></pre>
+<p>Following model is <span class="math inline">\(lcavol = \beta_1 lbph + \beta_2 lpsa + \varepsilon\)</span>. It is a model of size 2.</p>
+<pre class="r"><code>model = lm(lcavol ∼ ., data=pro[,c(1,4,9)])
+summary(model)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = lcavol ~ ., data = pro[, c(1, 4, 9)])
+## 
+## Residuals:
+##     Min      1Q  Median      3Q     Max 
+## -2.2998 -0.6245  0.0414  0.5564  1.6266 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -0.54900    0.19459  -2.821  0.00583 ** 
+## lbph        -0.08791    0.05709  -1.540  0.12697    
+## lpsa         0.76979    0.07176  10.728  &lt; 2e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.7983 on 94 degrees of freedom
+## Multiple R-squared:  0.5508, Adjusted R-squared:  0.5412 
+## F-statistic: 57.62 on 2 and 94 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>paste0(&quot;Residual sum of squares is &quot;,deviance(model))</code></pre>
+<pre><code>## [1] &quot;Residual sum of squares is 59.9097892820639&quot;</code></pre>
+<p>The last model is <span class="math inline">\(lcavol = \beta_1 lweight + \beta_2 lpsa + \varepsilon\)</span>. It is a model of size 2.</p>
+<pre class="r"><code>model = lm(lcavol ∼ ., data=pro[,c(1,2,9)])
+summary(model)</code></pre>
+<pre><code>## 
+## Call:
+## lm(formula = lcavol ~ ., data = pro[, c(1, 2, 9)])
+## 
+## Residuals:
+##      Min       1Q   Median       3Q      Max 
+## -2.06980 -0.60231  0.05406  0.53762  1.70037 
+## 
+## Coefficients:
+##             Estimate Std. Error t value Pr(&gt;|t|)    
+## (Intercept) -0.09570    0.71596  -0.134    0.894    
+## lweight     -0.12781    0.21327  -0.599    0.550    
+## lpsa         0.77047    0.07915   9.734 6.75e-16 ***
+## ---
+## Signif. codes:  0 &#39;***&#39; 0.001 &#39;**&#39; 0.01 &#39;*&#39; 0.05 &#39;.&#39; 0.1 &#39; &#39; 1
+## 
+## Residual standard error: 0.8068 on 94 degrees of freedom
+## Multiple R-squared:  0.5412, Adjusted R-squared:  0.5314 
+## F-statistic: 55.44 on 2 and 94 DF,  p-value: &lt; 2.2e-16</code></pre>
+<pre class="r"><code>paste0(&quot;Residual sum of squares is &quot;,deviance(model))</code></pre>
+<pre><code>## [1] &quot;Residual sum of squares is 61.1871213344348&quot;</code></pre>
+<p>The lowest residual sum of squares, as well as the highest value of F-test, is observed with the second implemented model.</p>
+</div>
+<div id="b" class="section level4">
+<h4>b)</h4>
+<pre class="r"><code>comb = combn(8,2)
+for (i in 1:28) {
+  vect = c(1,comb[1,i]+1,comb[2,i]+1)
+  print(paste(&quot; RSS for combination - &quot;,comb[1,i]+1 ,&quot;,&quot;,comb[2,i]+1,&quot; is &quot;,deviance(lm(lcavol ∼ ., data=pro[,vect]))))
+}</code></pre>
+<pre><code>## [1] &quot; RSS for combination -  2 , 3  is  120.402501227025&quot;
+## [1] &quot; RSS for combination -  2 , 4  is  121.31398244673&quot;
+## [1] &quot; RSS for combination -  2 , 5  is  89.3452701547991&quot;
+## [1] &quot; RSS for combination -  2 , 6  is  68.6076487865289&quot;
+## [1] &quot; RSS for combination -  2 , 7  is  99.6599372602952&quot;
+## [1] &quot; RSS for combination -  2 , 8  is  100.895025274654&quot;
+## [1] &quot; RSS for combination -  2 , 9  is  61.1871213344348&quot;
+## [1] &quot; RSS for combination -  3 , 4  is  126.205507884574&quot;
+## [1] &quot; RSS for combination -  3 , 5  is  91.1061939836275&quot;
+## [1] &quot; RSS for combination -  3 , 6  is  69.9302061444024&quot;
+## [1] &quot; RSS for combination -  3 , 7  is  106.723592066783&quot;
+## [1] &quot; RSS for combination -  3 , 8  is  106.680685657678&quot;
+## [1] &quot; RSS for combination -  3 , 9  is  60.035696734806&quot;
+## [1] &quot; RSS for combination -  4 , 5  is  93.9098332051736&quot;
+## [1] &quot; RSS for combination -  4 , 6  is  72.4041932988172&quot;
+## [1] &quot; RSS for combination -  4 , 7  is  108.417632986711&quot;
+## [1] &quot; RSS for combination -  4 , 8  is  108.274319621022&quot;
+## [1] &quot; RSS for combination -  4 , 9  is  59.9097892820639&quot;
+## [1] &quot; RSS for combination -  5 , 6  is  70.8091732639893&quot;
+## [1] &quot; RSS for combination -  5 , 7  is  84.6094196046382&quot;
+## [1] &quot; RSS for combination -  5 , 8  is  88.7355809176743&quot;
+## [1] &quot; RSS for combination -  5 , 9  is  58.4521881833056&quot;
+## [1] &quot; RSS for combination -  6 , 7  is  71.2382091573899&quot;
+## [1] &quot; RSS for combination -  6 , 8  is  72.5299945406043&quot;
+## [1] &quot; RSS for combination -  6 , 9  is  47.2780972897865&quot;
+## [1] &quot; RSS for combination -  7 , 8  is  104.809860064083&quot;
+## [1] &quot; RSS for combination -  7 , 9  is  57.3988304284976&quot;
+## [1] &quot; RSS for combination -  8 , 9  is  58.946249575393&quot;</code></pre>
+<p>The lowest RSS is reached with combination of predictors 6 and 9 (lcp, lpsa).</p>
+</div>
+<div id="c" class="section level4">
+<h4>c)</h4>
+</div>
 </div>
 </div>
 

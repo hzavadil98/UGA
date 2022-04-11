@@ -1,0 +1,288 @@
+% Options for packages loaded elsewhere
+\PassOptionsToPackage{unicode}{hyperref}
+\PassOptionsToPackage{hyphens}{url}
+%
+\documentclass[
+]{article}
+\usepackage{amsmath,amssymb}
+\usepackage{lmodern}
+\usepackage{ifxetex,ifluatex}
+\ifnum 0\ifxetex 1\fi\ifluatex 1\fi=0 % if pdftex
+  \usepackage[T1]{fontenc}
+  \usepackage[utf8]{inputenc}
+  \usepackage{textcomp} % provide euro and other symbols
+\else % if luatex or xetex
+  \usepackage{unicode-math}
+  \defaultfontfeatures{Scale=MatchLowercase}
+  \defaultfontfeatures[\rmfamily]{Ligatures=TeX,Scale=1}
+\fi
+% Use upquote if available, for straight quotes in verbatim environments
+\IfFileExists{upquote.sty}{\usepackage{upquote}}{}
+\IfFileExists{microtype.sty}{% use microtype if available
+  \usepackage[]{microtype}
+  \UseMicrotypeSet[protrusion]{basicmath} % disable protrusion for tt fonts
+}{}
+\makeatletter
+\@ifundefined{KOMAClassName}{% if non-KOMA class
+  \IfFileExists{parskip.sty}{%
+    \usepackage{parskip}
+  }{% else
+    \setlength{\parindent}{0pt}
+    \setlength{\parskip}{6pt plus 2pt minus 1pt}}
+}{% if KOMA class
+  \KOMAoptions{parskip=half}}
+\makeatother
+\usepackage{xcolor}
+\IfFileExists{xurl.sty}{\usepackage{xurl}}{} % add URL line breaks if available
+\IfFileExists{bookmark.sty}{\usepackage{bookmark}}{\usepackage{hyperref}}
+\hypersetup{
+  pdftitle={TP2},
+  pdfauthor={Elliott Perryman, Jan Zavadil, Ignat Sabaev},
+  hidelinks,
+  pdfcreator={LaTeX via pandoc}}
+\urlstyle{same} % disable monospaced font for URLs
+\usepackage[margin=1in]{geometry}
+\usepackage{color}
+\usepackage{fancyvrb}
+\newcommand{\VerbBar}{|}
+\newcommand{\VERB}{\Verb[commandchars=\\\{\}]}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{commandchars=\\\{\}}
+% Add ',fontsize=\small' for more characters per line
+\usepackage{framed}
+\definecolor{shadecolor}{RGB}{248,248,248}
+\newenvironment{Shaded}{\begin{snugshade}}{\end{snugshade}}
+\newcommand{\AlertTok}[1]{\textcolor[rgb]{0.94,0.16,0.16}{#1}}
+\newcommand{\AnnotationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\AttributeTok}[1]{\textcolor[rgb]{0.77,0.63,0.00}{#1}}
+\newcommand{\BaseNTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\BuiltInTok}[1]{#1}
+\newcommand{\CharTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\CommentTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\CommentVarTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ConstantTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ControlFlowTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\DataTypeTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{#1}}
+\newcommand{\DecValTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\DocumentationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\ErrorTok}[1]{\textcolor[rgb]{0.64,0.00,0.00}{\textbf{#1}}}
+\newcommand{\ExtensionTok}[1]{#1}
+\newcommand{\FloatTok}[1]{\textcolor[rgb]{0.00,0.00,0.81}{#1}}
+\newcommand{\FunctionTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\ImportTok}[1]{#1}
+\newcommand{\InformationTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\newcommand{\KeywordTok}[1]{\textcolor[rgb]{0.13,0.29,0.53}{\textbf{#1}}}
+\newcommand{\NormalTok}[1]{#1}
+\newcommand{\OperatorTok}[1]{\textcolor[rgb]{0.81,0.36,0.00}{\textbf{#1}}}
+\newcommand{\OtherTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{#1}}
+\newcommand{\PreprocessorTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textit{#1}}}
+\newcommand{\RegionMarkerTok}[1]{#1}
+\newcommand{\SpecialCharTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\SpecialStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\StringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\VariableTok}[1]{\textcolor[rgb]{0.00,0.00,0.00}{#1}}
+\newcommand{\VerbatimStringTok}[1]{\textcolor[rgb]{0.31,0.60,0.02}{#1}}
+\newcommand{\WarningTok}[1]{\textcolor[rgb]{0.56,0.35,0.01}{\textbf{\textit{#1}}}}
+\usepackage{graphicx}
+\makeatletter
+\def\maxwidth{\ifdim\Gin@nat@width>\linewidth\linewidth\else\Gin@nat@width\fi}
+\def\maxheight{\ifdim\Gin@nat@height>\textheight\textheight\else\Gin@nat@height\fi}
+\makeatother
+% Scale images if necessary, so that they will not overflow the page
+% margins by default, and it is still possible to overwrite the defaults
+% using explicit options in \includegraphics[width, height, ...]{}
+\setkeys{Gin}{width=\maxwidth,height=\maxheight,keepaspectratio}
+% Set default figure placement to htbp
+\makeatletter
+\def\fps@figure{htbp}
+\makeatother
+\setlength{\emergencystretch}{3em} % prevent overfull lines
+\providecommand{\tightlist}{%
+  \setlength{\itemsep}{0pt}\setlength{\parskip}{0pt}}
+\setcounter{secnumdepth}{-\maxdimen} % remove section numbering
+\ifluatex
+  \usepackage{selnolig}  % disable illegal ligatures
+\fi
+
+\title{TP2}
+\author{Elliott Perryman, Jan Zavadil, Ignat Sabaev}
+\date{2/25/2022}
+
+\begin{document}
+\maketitle
+
+\hypertarget{data}{%
+\subsection{1 Data}\label{data}}
+
+\begin{verbatim}
+## Warning: package 'maps' was built under R version 4.1.2
+\end{verbatim}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-1-1.pdf} The
+code above takes the data stored in NAm2, it takes the names and
+location of all the indian populations (all the individuals from a
+single population have the same location in the data) and plots them
+over the map of the Americas. It does so using \emph{unique} command,
+which returns all the unique rows from a given vector/DataFrame.
+
+\hypertarget{regression}{%
+\subsection{2 Regression}\label{regression}}
+
+\begin{verbatim}
+## 
+## Call:
+## lm(formula = long ~ ., data = NAaux)
+## 
+## Residuals:
+## ALL 494 residuals are 0: no residual degrees of freedom!
+## 
+## Coefficients: (5216 not defined because of singularities)
+##                         Estimate Std. Error t value Pr(>|t|)
+## (Intercept)            1250.3745        NaN     NaN      NaN
+## L1.125                 -171.2557        NaN     NaN      NaN
+## L1.130                   44.7543        NaN     NaN      NaN
+## L1.135                  -54.5783        NaN     NaN      NaN
+## L1.140                 -264.3330        NaN     NaN      NaN
+## L1.142                 -792.4778        NaN     NaN      NaN
+## L1.145                   65.6649        NaN     NaN      NaN
+## L1.150                   51.0931        NaN     NaN      NaN
+## L1.150.940397350993      25.7019        NaN     NaN      NaN
+## L1.152                 -249.8699        NaN     NaN      NaN
+## L1.155                   25.2062        NaN     NaN      NaN
+## L1.160                   67.5255        NaN     NaN      NaN
+##  [ reached getOption("max.print") -- omitted 5698 rows ]
+## 
+## Residual standard error: NaN on 0 degrees of freedom
+## Multiple R-squared:      1,  Adjusted R-squared:    NaN 
+## F-statistic:   NaN on 493 and 0 DF,  p-value: NA
+\end{verbatim}
+
+The linear model does not return valid results since the number of
+observations is lower than the number of predictors.
+
+\hypertarget{pca}{%
+\subsection{3 PCA}\label{pca}}
+
+\hypertarget{a}{%
+\paragraph{a)}\label{a}}
+
+Principle Component Analysis is a statistical method used to lower
+dimension of observed data. It aims to represent the data in low
+dimensions while keeping as much variance (and therefore information) in
+the data as possible.
+
+\hypertarget{b}{%
+\paragraph{b)}\label{b}}
+
+In this case the scaling option of \emph{prcomp} function should not be
+used. All the variable are of value 0 or 1, therefore any difference in
+variance between them is a valuable information which would be lost by
+scaling the data.
+
+\hypertarget{c}{%
+\paragraph{c)}\label{c}}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-3-1.pdf}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-4-1.pdf}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-5-1.pdf}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-6-1.pdf}
+
+\begin{verbatim}
+## Warning: package 'fields' was built under R version 4.1.2
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: spam
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: package 'spam' was built under R version 4.1.2
+\end{verbatim}
+
+\begin{verbatim}
+## Spam version 2.8-0 (2022-01-05) is loaded.
+## Type 'help( Spam)' or 'demo( spam)' for a short introduction 
+## and overview of this package.
+## Help for individual functions is also obtained by adding the
+## suffix '.spam' to the function name, e.g. 'help( chol.spam)'.
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Attaching package: 'spam'
+\end{verbatim}
+
+\begin{verbatim}
+## The following objects are masked from 'package:base':
+## 
+##     backsolve, forwardsolve
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: viridis
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: package 'viridis' was built under R version 4.1.2
+\end{verbatim}
+
+\begin{verbatim}
+## Loading required package: viridisLite
+\end{verbatim}
+
+\begin{verbatim}
+## Warning: package 'viridisLite' was built under R version 4.1.2
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Attaching package: 'viridis'
+\end{verbatim}
+
+\begin{verbatim}
+## The following object is masked from 'package:maps':
+## 
+##     unemp
+\end{verbatim}
+
+\begin{verbatim}
+## 
+## Try help(fields) to get started.
+\end{verbatim}
+
+\begin{Shaded}
+\begin{Highlighting}[]
+\FunctionTok{metric}\NormalTok{(lmlong, lmlat)}
+\end{Highlighting}
+\end{Shaded}
+
+\begin{verbatim}
+##          [,1]
+## [1,] 1177.612
+\end{verbatim}
+
+\begin{verbatim}
+## Warning in predict.lm(lmLong, X): prediction from a rank-deficient fit may be
+## misleading
+\end{verbatim}
+
+\begin{verbatim}
+## Warning in predict.lm(lmLat, X): prediction from a rank-deficient fit may be
+## misleading
+\end{verbatim}
+
+\begin{verbatim}
+## Warning in predict.lm(lmLong, X): prediction from a rank-deficient fit may be
+## misleading
+\end{verbatim}
+
+\begin{verbatim}
+## Warning in predict.lm(lmLat, X): prediction from a rank-deficient fit may be
+## misleading
+\end{verbatim}
+
+\includegraphics{tp2el_files/figure-latex/unnamed-chunk-10-1.pdf}
+
+\end{document}

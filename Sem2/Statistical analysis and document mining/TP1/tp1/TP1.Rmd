@@ -1,0 +1,364 @@
+---
+title: "Statistical Analysis and Document Mining TP1"
+author: "Elliott Perryman, Jan Zavadil, Ignat Sabaev"
+date: "February 2022"
+output: html_document
+---
+## Part 1: Multiple regression on simulated data
+### Spurious Correlations
+With random number seed set to 0, random variables, samples are drawn from the standard normal. The variables are stored in an $N x M$ matrix, with N = 6,000 and M = 201. The random variables are not related at all, so a linear regression on the first column using the last 200 shows an intercept and slopes with a Gaussian distribution around 0. The equation and (truncated) output is shown below:
+$$
+\hat{y_i} = \beta_0 + \sum^{200}_{i=1} \beta_i \epsilon_i \\
+\epsilon_i \sim \mathcal{N}(0,I) \quad \forall i
+$$
+```{r setup1, include=FALSE}
+set.seed(0)
+nrows = 6000
+ncols = 201
+data = data.frame(matrix(rnorm(nrows*ncols), nrow=nrows))
+```
+
+```{r lmFit_1_1, include=TRUE, echo=FALSE, output.lines=10}
+fit = lm(formula = X1 ~ ., data)
+options(max.print=50)
+summary(fit)
+options(max.print=1000)
+```
+As shown in this output, the F statistic is close to 1, as expected, since the regression will not decrease the variance in the overall dataset. Since outputs with t values below X are read as "probability that the significance of this variable is due to random fluctuations is less than X percent", roughly X*nrows will be reported as significant at the 5% level. This is shown below.
+```{r, pseudo_significant, echo=TRUE, include=TRUE}
+sum(summary(fit)[["coefficients"]][, "Pr(>|t|)"]<0.05)
+ncols * 0.05
+```
+As seen above, 9 variables are read as significant at the 5% level. This is simply because there are so many explanatory variables, and it is clear from the fact that the F statistic is ~1 that there is no meaningful (mean) regression on these variables. The coefficients are themselves roughly normal random variables (shown below).
+```{r hist_coeffs, echo=FALSE}
+beta = summary(fit)$coefficients[,"Estimate"]
+hist(beta)
+```
+
+### Correlated Variables
+#### Generation
+Now the effects of correlated variables are investigated. for this example, the sample size is n=1,000 and samples for the following variables are given by:
+$$
+X_{1,i} = \epsilon_{1,i} \\
+X_{2,i} = 3*X_{1,i} + \epsilon_{2,i} \\
+Y_i = X_{2,i} + X_{1,i} + 2 + \epsilon_{3,i} \\
+\epsilon_{j,i} \sim \mathcal{N}(0,\sigma^2)
+$$
+These variables are generated and plotted below.
+```{r plot_corr_variables, echo=FALSE}
+n = 1000
+eps = matrix(rnorm(3*n), nrow=n)
+X1 = eps[,1]
+X2 = 3*X1 + eps[,2]
+Y = X1 + X2 + 2 + eps[,3]
+data = data.frame(X1, X2, Y)
+fit = lm(formula = Y ~ X1 + X2, data)
+plot(X1, X2)
+```
+
+This plot shows the linear relationship between X1 and X2, the normal distribution of X1, and the normal distribution of X2 (expected by affine transformation of X1 and addition of normal variables).
+Linear regression gives the expected coefficients:
+```{r fit_corr_variables, echo=FALSE}
+summary(fit)
+```
+
+The residual standard error is roughly 1, and the coefficients are also within 1 $\sigma$ of 1, as they should be.
+#### Restricted regression
+Now the models below are fit, and compared.
+
+Model 1: $Y_i = \beta_1 X_{1,i} + \beta_0 + \tilde{\epsilon}_{1,i}$
+
+Model 2: $Y_i = \beta_2 X_{2,i} + \beta_0 + \tilde{\epsilon}_{2,i}$
+
+In model 1, the two errors $\epsilon_1$ and $\epsilon_2$ are added together for a sigma of $\sqrt{2}$ (by square root of sum of $\sigma^2$). In model 1, the coefficient for X1 should be 4, since it is accounting for the X2 variable.
+
+In model 2, the beta coefficient for X2 has an additional factor of $\frac{1}{3}$ from the X1 variable that is implicit in X1.
+
+```{r model comparison, echo=FALSE}
+fit_model1 = lm(formula = Y ~ X1, data.frame(X1,Y))
+fit_model2 = lm(formula = Y ~ X2, data.frame(X2,Y))
+summary(fit_model1)
+summary(fit_model2)
+```
+
+#### Restricted Regression with small N
+Reseeding the random number generator to 3 and generating the same simulated output produces the following output. The estimates of all values have become significantly worse. Probably the estimates are much less reliable when the dealing with correlated variables and correlated noise. The same plots and regressions as above are repeated below.
+```{r small n simulation, echo=FALSE}
+set.seed(3)
+n = 10
+eps = matrix(rnorm(3*n), nrow=n)
+X1 = eps[,1]
+X2 = 3*X1 + eps[,2]
+Y = X1 + X2 + 2 + eps[,3]
+data = data.frame(X1, X2, Y)
+fit = lm(formula = Y ~ X1 + X2, data)
+plot(X1, X2)
+```
+
+
+```{r small n fit, echo=FALSE}
+summary(fit)
+```
+
+```{r small n model comparison, echo=FALSE}
+fit_model1 = lm(formula = Y ~ X1, data.frame(X1,Y))
+fit_model2 = lm(formula = Y ~ X2, data.frame(X2,Y))
+summary(fit_model1)
+summary(fit_model2)
+```
+
+From these regression fits and plots, it is clear that the tests are indicating that X1 and X2 are correlated because the coefficients for the 2 variable linear regression reports low explanatory power for the beta coefficients and low F statistic, while the single variable analyses have high significance and high f-statistic.
+
+## Part 2: Analysis of prostate cancer data
+#### 1. Preliminary analysis of the data
+```{r, echo=F}
+prostateCancer<- read.table("./prostate.data", header=T)
+attach(prostateCancer)
+train = prostateCancer["train"]
+data = prostateCancer[,0:(length(prostateCancer)-1)]
+pairs(data)
+```
+After pairs plotting we can see the correlation of lcavol with lpsa and lcp. 
+
+#### 2. Linear regression
+#### a)
+```{r, echo=F}
+prostateCancer$gleason<-factor(prostateCancer$gleason)
+prostateCancer$svi<-factor(prostateCancer$svi)
+summary(lm(formula = lcavol ~ ., data=data) ) 
+```
+After looking at results of summary function it is seen that lcp and lpsa influenses lcavol much stronger than other parameters. Effect from other parameters is not significant. Also p-values for pgg45 and age are less than 0.05 but R Signif. codes says that it actually is 0.05.
+Multiple R-squared is 0.6865.
+If we look at the result of onfluence of lpsa and lcp only then we will see that their Multiple R-squared is  0.6455.
+```{r, echo=F}
+summary(lm(formula = lcavol ~ lpsa + lcp, data))
+```
+It seems like we can take into consideration these two parameters only and work with them.
+
+#### b)
+```{r, echo=F}
+confint(fit) 
+```
+The result of confint function showes that pgg45, lbph and age are the most concentrated values while gleason9 is too splitted. 
+
+#### c)
+P-value for lpsa is far away lower than others. It means that it predicts lcavol by itself very well. Confidence interval of lpsa is quite hight and relatively in the midle among others. 
+
+#### d)
+```{r, echo=F}
+plot(predict(multiple.regression))
+
+ggplot(data = data, aes(x = multiple.regression$residuals)) +
++     geom_histogram(fill = 'steelblue', color = 'black') +
++     labs(title = 'Histogram of Residuals', x = 'Residuals')
+```
+It seems that residuals are normally distributed.
+
+#### e)
+If we compare prediction with the actual values we will se that the model behaves well. I can not call it optimal as it consist of many parameters when is fact only two of them really matter. 
+```{r, echo=F}
+plot(x=predict(multiple.regression), y=prostateCancer$lcavol)
+abline(a=0, b=1)
+```
+#### f)
+```{r, echo=F}
+new.regression <- lm(formula = lcavol ~ lweight + age + lbph + svi + gleason + pgg45, data=prostateCancer)
+summary(new.regression)
+```
+We can mention that without lpsa and lcp Multiple R-squared significantly reduced by  0.4327. Adjusted R-squared, which is more important in case of multiple regression reduced to 0.3811. It made model much worse.
+When we try to plot the new predicted data and compare with the actual values then we also see that new model does not fit.
+```{r, echo=F}
+plot(x=predict(new.regression),y=prostateCancer$lcavol)
+abline(a=0, b=1)
+```
+
+
+### 3. Best subset selection
+
+#### a)
+
+Three models are considered, each of which is very simple. Their descriptions and output are given below.
+First model is $lcavol = \beta_0 + \varepsilon$. It is a model of size O.
+```{r, echo=F}
+model = lm(lcavol ~ 1, data=pro)
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+
+Following model is $lcavol = \beta_1 lbph + \beta_2 lpsa + \varepsilon$. It is a model of size 2.
+```{r, echo=F}
+model = lm(lcavol ~ ., data=pro[,c(1,4,9)])
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+
+
+The last model is $lcavol = \beta_1 lweight + \beta_2 lpsa + \varepsilon$. It is a model of size 2.
+```{r, echo=F}
+model = lm(lcavol ~ ., data=pro[,c(1,2,9)])
+summary(model)
+paste0("Residual sum of squares is ",deviance(model))
+```
+
+The lowest residual sum of squares, as well as the highest value of F-test, is observed with the second implemented model.
+
+#### b)
+
+```{r, echo=F}
+comb = combn(8,2)
+for (i in 1:28) {
+  vect = c(1,comb[1,i]+1,comb[2,i]+1)
+  print(paste(" RSS for combination - ",comb[1,i]+1 ,",",comb[2,i]+1," is ",deviance(lm(lcavol ~., data=pro[,vect]))))
+}
+```
+
+The lowest RSS (~47) is reached with combination of predictors 6 and 9 (lcp, lpsa).
+
+
+#### c)
+
+In the following code we compute the minimal RSS for each size of the model between 0 and 8. In the figure below, the minimal RSS is plotted against the size of model.
+
+```{r, echo=F}
+minRSS <- 1:8
+lowest <- list()
+for (j in 1:8) {
+  comb = combn(8,j)
+  dev <- 1:length(comb[1,])
+  for (i in 1:length(comb[1,])) {
+    vect = c(1,comb[,i]+1);
+    dev[i] = deviance(lm(lcavol ~ ., data=pro[,vect]))
+  }
+  minRSS[j] = min(dev)
+  lowest[j] = list(comb[,which.min(dev)]+1)
+}
+minRSS = c(deviance(lm(lcavol ~ 1, data=pro)),minRSS)
+
+plot(0:8,minRSS,type = "b",main ="RSS by number of predictors",xlab = "Number of predictors")
+```
+
+Further, we provide the list of predictors minimalizing the RSS for each size of the regression model.
+
+```{r, echo=F}
+
+for (i in 1:8){
+  print(paste("Number of predictors: ",i,". Predictors minimalizing RSS: ",lowest[i]))
+}
+
+```
+
+#### d)
+We do not think that only minimizing the RSS is a good way to determine the optimal size of the regression model. That way, we would always chose the maximal size possible, as the RSS always decreases with higher size of model. It would be better to observe the decrease of RSS between each step up in size and once this difference is low enough (for example size = 2 in our case) we would call it the optimal size.
+
+### 4. Split Validation
+
+#### (a).
+Split validation works by taking some representative (usually random) sample of the original dataset, and excluding those samples from the data used to fit models. After models {$M_0$, $M_1$, ...} are fit, they are evaluated on the validation set. This tests the generalization power of the model. For example, maybe if the true underlying function has some corrupting noise, parametric regression would still have residual error on its training data. However, the model that just memorizes every training point and returns the previous y value if it has seen it before otherwise returning infinity would have 0 error on its training data. Cross validation like this punishes models for memorizing quirks in the training data, thus reducing the types of effects from section 3. 
+
+#### (b). 
+For the $M_2$ model, the features used are 6 and 9. Its regression and metric (variance of residuals) on the training data is given below.
+```{r, echo=F}
+
+metric = function(fit, validation=F) {
+  if (validation) {
+    z = var(predict.lm(fit, pro[!!valid, ]) - pro[!!valid, 1])
+  }
+  else {
+    z = var(predict.lm(fit, pro[!valid, ]) - pro[!valid, 1])
+  }
+  z
+}
+
+N = length(pro[,1])
+valid = (1:N %% 3) == 0
+fit = lm(lcavol ~ ., pro[!valid, c(1,6,9)])
+```
+```{r}
+summary(fit)
+metric(fit)
+metric(fit, validation = TRUE)
+```
+
+This shows the summary of the $M_2$ model, along with its variance of residuals for training and validation data. Next, this process is repeated for all models to produce the figure below. This is also repeated for randomly selected validation data.
+```{r, echo=F}
+N = length(pro[,1])
+valid = (1:N %% 3) == 0
+#valid = 1:N
+#for (i in 1:N) {valid[i] = F}
+#valid[sample(N, N/3)] = T
+
+M = 7
+residuals_training = 0:M
+residuals_valid = 0:M
+fit = lm(lcavol ~ 1, pro[!valid, ])
+
+
+residuals_training[1] = metric(fit)
+residuals_valid[1] = metric(fit, T)
+best_indices = 1:M
+
+for (k in 1:(M+1)) {
+  combos = combn(1:(M+1),k)
+  best_val = Inf
+  best_ind = 1
+  for (i in 1:length(combos[1,])) {
+    fit = lm(formula = lcavol ~ ., pro[!valid,append(c(1),combos[,i]+1)])
+    if (metric(fit) < best_val) {
+      best_val = metric(fit)
+      best_ind = i
+    }
+  }
+  best_indices[k] = best_ind
+  residuals_training[k] = best_val
+  fit = lm(formula = lcavol ~ ., pro[!valid,append(c(1),combos[,best_ind]+1)])
+  residuals_valid[k] = metric(fit, T)
+}
+
+plot(1:(M+1), residuals_training, col="gold", type = "b",main ="Error as a function of model size (nonrandom validation)",ylab = "Variance of residuals", xlab = "Number of predictors", ylim=c(0.3, 1.1))
+lines(1:(M+1), residuals_valid, type = "b",col="blue")
+legend("topright", c("training","validation"), fill=c("gold","blue"))
+```
+
+```{r, echo=F}
+N = length(pro[,1])
+#valid = (1:N %% 3) == 0
+valid = 1:N
+for (i in 1:N) {valid[i] = F}
+valid[sample(N, N/3)] = T
+
+M = 7
+residuals_training = 0:M
+residuals_valid = 0:M
+fit = lm(lcavol ~ 1, pro[!valid, ])
+
+
+residuals_training[1] = metric(fit)
+residuals_valid[1] = metric(fit, T)
+best_indices = 1:M
+
+for (k in 1:(M+1)) {
+  combos = combn(1:(M+1),k)
+  best_val = Inf
+  best_ind = 1
+  for (i in 1:length(combos[1,])) {
+    fit = lm(formula = lcavol ~ ., pro[!valid,append(c(1),combos[,i]+1)])
+    if (metric(fit) < best_val) {
+      best_val = metric(fit)
+      best_ind = i
+    }
+  }
+  best_indices[k] = best_ind
+  residuals_training[k] = best_val
+  fit = lm(formula = lcavol ~ ., pro[!valid,append(c(1),combos[,best_ind]+1)])
+  residuals_valid[k] = metric(fit, T)
+}
+
+plot(1:(M+1), residuals_training, col="gold", type = "b",main ="Error as a function of model size (random validation)",ylab = "Variance of residuals", xlab = "Number of predictors", ylim=c(0.3, 1.1))
+lines(1:(M+1), residuals_valid, type = "b",col="blue")
+legend("topright", c("training","validation"), fill=c("gold","blue"))
+```
+
+The main limitation of split validation is that it requires a representative sample of the data, which can cause the training data to be too small for a representative sample. Even if those are both true, it still trades accuracy in training for comparison, which is a non negligible drawback. This is seen by the two graphs above, which show how the difference in choice of validation can cause an interpretation difference.
+
+
+From this figure, we conclude that the $M_2$ model is best. Our argument is as follows: in the absence of compelling explanatory power, choose the simplest model. Even though other models have low validation error, $M_2$ is the smallest model that could give near optimal power. This sort of "Occam's Razor" approach has many benefits. For example, this would allow in-the-field domain experts to estimate lcavol directly via a simple formula that is easily interpretable. In addition, data collection is easier when there are far fewer measurements. Further research can dive into why one factor is so strongly correlated, rather than trying to pin down explanations between 7 variables.
